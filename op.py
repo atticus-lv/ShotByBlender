@@ -51,6 +51,15 @@ def get_color(dark_mode=False) -> tuple:
     return bg_color, title_col, tips_col, line_col
 
 
+def get_res_paths(dark_mode=False):
+    d = src_dir.joinpath('res')
+    boldFont = str(d.joinpath('fonts', 'MiSans-Demibold.ttf'))
+    lightFont = str(d.joinpath('fonts', 'MiSans-Medium.ttf'))
+    logo_path = str(d.joinpath('logos', 'blender.png' if not dark_mode else 'blender_w.png'))
+
+    return boldFont, lightFont, logo_path
+
+
 def get_scene_stats() -> str:
     stats = bpy.context.scene.statistics(bpy.context.view_layer)
 
@@ -63,12 +72,6 @@ def get_scene_stats() -> str:
     faces = faces.split(sep=':')[-1]
     tris = tris.split(sep=':')[-1]
 
-    d = {
-        'Verts': verts,
-        'Faces': faces,
-        'Tris': tris,
-        'Memory': mem,
-    }
     s = f"Faces: {faces} | {mem}"
     return s
 
@@ -81,11 +84,13 @@ def add_watermark_handle(dummy):
     draw_text_time = context.scene.sbb_text_time
     draw_text_stats = context.scene.sbb_text_stats
 
+    cache_dir = src_dir.joinpath('cache')
+    cache_dir.mkdir(exist_ok=True)
+
     ori_img = bpy.data.images['Render Result']
-    save_path = str(src_dir.joinpath('cache', 'render.png'))
+    save_path = str(cache_dir.joinpath('render.png'))
     ori_img.save_render(filepath=save_path)
 
-    # add watermark
     path = save_path
     ori_img = Image.open(path)
     width, height = ori_img.size
@@ -109,34 +114,33 @@ def add_watermark_handle(dummy):
         title_left += f' {bpy.app.version_string}'
     # right_text = '75mm f/1.8 Filmic Cycles'
     cam = context.scene.camera.data
-    fstop = round(cam.dof.aperture_fstop, 2)
-    lens = bpy.context.scene.camera.data.lens
+    fstop = round(cam.dof.aperture_fstop, 1)
+    lens = str(bpy.context.scene.camera.data.lens).split('.')[0]
     cs = context.scene.view_settings.view_transform.strip().replace(" ", "")
-    render_engine = easy_engine_name[context.scene.render.engine]
+    render_engine = easy_engine_name.get(context.scene.render.engine, context.scene.render.engine.title())
 
-    title_right = f'{lens}mm f/{fstop} {render_engine}'
+    title_right = f'{lens}mm f/{fstop} {render_engine.upper()}'
     text_time = datetime.datetime.now().strftime('%Y.%m.%d %H:%M:%S')
     text_stats = get_scene_stats()
 
-    # Add Text to an image, set size
     title_font_size = height * 0.16
     tips_font_size = title_font_size * 0.7
     if not draw_text_stats and not draw_text_time:
         title_font_size *= 1.25
         tips_font_size *= 1.25
 
-    boldFont = ImageFont.truetype(str(src_dir.joinpath('fonts', 'MiSans-Demibold.ttf')), int(title_font_size))
-    lightFont = ImageFont.truetype(str(src_dir.joinpath('fonts', 'MiSans-Medium.ttf')), int(tips_font_size))
-    logo_path = str(src_dir.joinpath('logos', 'blender.png' if not context.scene.sbb_dark_mode else 'blender_w.png'))
+    # get resource
+    font_path1, font_path2, logo_path = get_res_paths(dark_mode=context.scene.sbb_dark_mode)
+    boldFont = ImageFont.truetype(font_path1, int(title_font_size))
+    lightFont = ImageFont.truetype(font_path2, int(tips_font_size))
 
+    # location
     side_padding = width * preset[config]['padding']
-
-
-
     y_mid = height / 2
     y_title = y_mid - title_font_size * 1.25  # 1.25
     loc_x_r_title = width - side_padding - DrawImg.textsize(title_right, font=boldFont)[0]
 
+    # label to show
     if not draw_text_stats and not draw_text_time:
         y_title += title_font_size * 0.5
     else:
@@ -163,20 +167,24 @@ def add_watermark_handle(dummy):
     logo_height = int(height * logo_scale)
     logo_width = int(logo.size[0] * logo_height / logo.size[1])
     logo = logo.resize((logo_width, logo_height), Image.ANTIALIAS)
+
     # paste logo image next to right text
     loc_logo_x = int(width - side_padding * 2 - DrawImg.textsize(title_right, font=boldFont)[0] - logo.size[0])
-    loc_logo_y = int(y_mid - logo_height / 2 )
+    loc_logo_y = int(y_mid - logo_height / 2)
     label_img.paste(logo, (loc_logo_x, loc_logo_y), logo)
 
     # draw a line shape between right text and logo
-    line_start = int((loc_logo_x + logo.size[0] + loc_x_r_title) / 2), int(loc_logo_y+logo.size[1]*0.1)
-    line_end = int((loc_logo_x + logo.size[0] + loc_x_r_title) / 2), int(loc_logo_y + logo.size[1]*0.9)
+    line_start = int((loc_logo_x + logo.size[0] + loc_x_r_title) / 2), int(loc_logo_y + logo.size[1] * 0.1)
+    line_end = int((loc_logo_x + logo.size[0] + loc_x_r_title) / 2), int(loc_logo_y + logo.size[1] * 0.9)
     DrawImg.line([line_start, line_end], fill=line_col, width=int(width / 500))
 
     # paste label_img to new_img and save
-    out_path = str(src_dir.joinpath('output', 'watermark.png'))
+    out_path = str(cache_dir.joinpath('output.png'))
     new_img.paste(label_img, (0, ori_img.size[1]), label_img)
     new_img.save(out_path)
+    out_label_path = str(cache_dir.joinpath('label.png'))
+    label_img.save(out_label_path)
+
     # load back to blender
     if 'Render Result_WM' in bpy.data.images:
         bpy.data.images.remove(bpy.data.images['Render Result_WM'])
@@ -189,6 +197,7 @@ def add_watermark_handle(dummy):
         for area in window.screen.areas:
             if area.type == 'IMAGE_EDITOR':
                 area.spaces.active.image = data
+                break
     except:
         pass
 
@@ -217,7 +226,7 @@ class SBB_PT_panel(bpy.types.Panel):
         layout.use_property_decorate = False
         layout.prop(scene, 'sbb_dark_mode', text=iface_("Dark") + iface_("Mode"))
 
-        box = layout.column(align = True,heading="Label")
+        box = layout.column(align=True, heading="Label")
         box.prop(scene, 'sbb_title_version')
         box.prop(scene, 'sbb_text_time')
         box.prop(scene, 'sbb_text_stats')
