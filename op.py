@@ -8,23 +8,6 @@ import bpy
 from bpy.props import EnumProperty, BoolProperty
 from bpy.app.handlers import persistent
 
-preset = {
-    '16/9': {
-        'scale': 1.2,
-        'font_scale': 0.15,
-        'padding': 0.025,
-        'bottom_padding': 0.7,
-        'logo_scale': 0.05
-    },
-    '1/1': {
-        'scale': 1.1,
-        'font_scale': 0.15,
-        'padding': 0.025,
-        'bottom_padding': 0.7,
-        'logo_scale': 0.05
-    }
-}
-
 easy_engine_name = {
     'BLENDER_EEVEE': 'Eevee',
     'BLENDER_WORKBENCH': 'Workbench',
@@ -34,7 +17,25 @@ easy_engine_name = {
 src_dir = Path(__file__).parent
 
 
-def get_color(dark_mode=False):
+def get_preset():
+    import json
+    preset_path = src_dir.joinpath('preset.json')
+    with open(preset_path, 'r') as f:
+        preset = json.load(f)
+
+    return preset
+
+
+def auto_config(width, height):
+    radio = width / height
+    # get the nearest config
+    if radio > 1:
+        return '2'
+    else:
+        return '1'
+
+
+def get_color(dark_mode=False) -> tuple:
     bg_color = (255, 255, 255)
     title_col = (0, 0, 0)
     tips_col = (128, 128, 128)
@@ -47,19 +48,6 @@ def get_color(dark_mode=False):
         line_col = (128, 128, 128)
 
     return bg_color, title_col, tips_col, line_col
-
-
-def auto_config(width, height):
-    radio = width / height
-    # get the nearest config
-    tg_key = '16/9'
-    diff = 1
-    for key in preset:
-        if abs(radio - float(key.split('/')[0]) / float(key.split('/')[1])) < diff:
-            diff = abs(radio - float(key.split('/')[0]) / float(key.split('/')[1]))
-            tg_key = key
-
-    return tg_key
 
 
 def get_scene_stats() -> str:
@@ -99,6 +87,7 @@ def add_watermark_handle(dummy):
     img = Image.open(path)
     width, height = img.size
 
+    preset = get_preset()
     config = auto_config(width, height)
     bg_col, title_col, tips_col, line_col = get_color(dark_mode=context.scene.sbb_dark_mode)
 
@@ -119,7 +108,7 @@ def add_watermark_handle(dummy):
     cs = context.scene.view_settings.view_transform
     render_engine = easy_engine_name[context.scene.render.engine]
 
-    right_text = f'{lens}mm f/{fstop} {cs.strip()} {render_engine}'
+    right_text = f'{lens}mm f/{fstop} {cs.strip().replace(" ", "")} {render_engine}'
     text_time = datetime.datetime.now().strftime('%Y.%m.%d %H:%M:%S')
     text_stats = get_scene_stats()
 
@@ -127,9 +116,13 @@ def add_watermark_handle(dummy):
     font_size = height * (scale - 1) * preset[config]['font_scale']
     boldFont = ImageFont.truetype(str(src_dir.joinpath('fonts', 'MiSans-Demibold.ttf')), int(font_size))
     lightFont = ImageFont.truetype(str(src_dir.joinpath('fonts', 'MiSans-Medium.ttf')), int(font_size * 0.75))
+    logo_path = str(src_dir.joinpath('logos', 'blender.png' if not context.scene.sbb_dark_mode else 'blender_w.png'))
 
     padding = width * preset[config]['padding']
     bottom_padding = font_size * 0.5 + height * (scale - 1) * preset[config]['bottom_padding']
+
+    draw_text_time = context.scene.sbb_text_time
+    draw_text_stats = context.scene.sbb_text_stats
 
     # Left Title Text
     I1.text((padding, height * scale - bottom_padding), left_text, font=boldFont, fill=title_col)
@@ -145,7 +138,6 @@ def add_watermark_handle(dummy):
     I1.text((loc_x_r_text_bold, loc_y_l_text_light), text_stats, font=lightFont, fill=tips_col)
 
     # get logo image
-    logo_path = str(src_dir.joinpath('logos', 'blender.png' if not context.scene.sbb_dark_mode else 'blender_w.png'))
     logo = Image.open(logo_path)
     logo.convert('RGBA')
     logo_scale = preset[config]['logo_scale']
@@ -196,14 +188,24 @@ class SBB_PT_panel(bpy.types.Panel):
 
     def draw(self, context):
         layout = self.layout
-        layout.active = context.scene.sbb_watermark
         scene = context.scene
+
+        layout.active = scene.sbb_watermark
+        layout.use_property_split = True
+        layout.use_property_decorate = False
         layout.prop(scene, 'sbb_dark_mode')
+
+        # layout.label(text='Label')
+        # row = layout.row()
+        # row.prop(scene, 'sbb_text_time')
+        # row.prop(scene, 'sbb_text_stats')
 
 
 def register():
     bpy.types.Scene.sbb_watermark = BoolProperty(name='Watermark', default=True)
     bpy.types.Scene.sbb_dark_mode = BoolProperty(name='Dark Mode', default=False)
+    bpy.types.Scene.sbb_text_time = BoolProperty(name='Time', default=True)
+    bpy.types.Scene.sbb_text_stats = BoolProperty(name='Statics', default=True)
 
     bpy.app.handlers.render_post.append(add_watermark_handle)
 
