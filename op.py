@@ -34,6 +34,56 @@ easy_engine_name = {
 src_dir = Path(__file__).parent
 
 
+def get_color(dark_mode=False):
+    bg_color = (255, 255, 255)
+    title_col = (0, 0, 0)
+    tips_col = (128, 128, 128)
+    line_col = (220, 220, 220)
+
+    if dark_mode:
+        bg_color = (0, 0, 0)
+        tips_col = (255, 255, 255)
+        title_col = (255, 255, 255)
+        line_col = (128, 128, 128)
+
+    return bg_color, title_col, tips_col, line_col
+
+
+def auto_config(width, height):
+    radio = width / height
+    # get the nearest config
+    tg_key = '16/9'
+    diff = 1
+    for key in preset:
+        if abs(radio - float(key.split('/')[0]) / float(key.split('/')[1])) < diff:
+            diff = abs(radio - float(key.split('/')[0]) / float(key.split('/')[1]))
+            tg_key = key
+
+    return tg_key
+
+
+def get_scene_stats() -> str:
+    stats = bpy.context.scene.statistics(bpy.context.view_layer)
+
+    if len(stats.split(sep=' | ')) == 7:
+        coll, verts, faces, tris, objs, mem, ver = stats.split(sep=' | ')
+    else:
+        coll, obj, verts, faces, tris, objs, mem, ver = stats.split(sep=' | ')
+
+    verts = verts.split(sep=':')[-1]
+    faces = faces.split(sep=':')[-1]
+    tris = tris.split(sep=':')[-1]
+
+    d = {
+        'Verts': verts,
+        'Faces': faces,
+        'Tris': tris,
+        'Memory': mem,
+    }
+    s = f"Faces: {faces} | {mem}"
+    return s
+
+
 @persistent
 def add_watermark_handle(dummy):
     if not bpy.context.scene.sbb_watermark: return
@@ -49,18 +99,19 @@ def add_watermark_handle(dummy):
     img = Image.open(path)
     width, height = img.size
 
-    config = context.scene.sbb_config
+    config = auto_config(width, height)
+    bg_col, title_col, tips_col, line_col = get_color(dark_mode=context.scene.sbb_dark_mode)
 
     # expand pixel size by scale
     scale = preset[config]['scale']
-    new_img = Image.new('RGB', (width, int(height * scale)), (255, 255, 255))  # expand the img bottom to draw
+    new_img = Image.new('RGB', (width, int(height * scale)), bg_col)  # expand the img bottom to draw
     new_img.paste(img, (0, 0))  # fill in the original image
 
     # Call draw Method to add 2D graphics in an image
     I1 = ImageDraw.Draw(new_img)
 
     # text
-    left_text = 'BLENDER3.5'
+    left_text = f'BLENDER {bpy.app.version_string}'
     # right_text = '75mm f/1.8 Filmic Cycles'
     cam = context.scene.camera.data
     fstop = round(cam.dof.aperture_fstop, 2)
@@ -70,10 +121,7 @@ def add_watermark_handle(dummy):
 
     right_text = f'{lens}mm f/{fstop} {cs.strip()} {render_engine}'
     text_time = datetime.datetime.now().strftime('%Y.%m.%d %H:%M:%S')
-
-    title_col = (0, 0, 0)
-    tips_col = (128, 128, 128)
-    line_col = (220, 220, 220)
+    text_stats = get_scene_stats()
 
     # Add Text to an image, set size
     font_size = height * (scale - 1) * preset[config]['font_scale']
@@ -83,17 +131,22 @@ def add_watermark_handle(dummy):
     padding = width * preset[config]['padding']
     bottom_padding = font_size * 0.5 + height * (scale - 1) * preset[config]['bottom_padding']
 
-    # Add Text to the bottom left of the image
+    # Left Title Text
     I1.text((padding, height * scale - bottom_padding), left_text, font=boldFont, fill=title_col)
-    # Add Text to the bottom right of the image
+    # Right Title Text
     loc_x_r_text_bold = width - padding - I1.textsize(right_text, font=boldFont)[0]
     loc_y_r_text_bold = height * scale - bottom_padding
     I1.text((loc_x_r_text_bold, loc_y_r_text_bold), right_text, font=boldFont, fill=title_col)
-    # Add Text to the bottom of the last text
-    I1.text((loc_x_r_text_bold, loc_y_r_text_bold + font_size * 1.5), text_time, font=lightFont, fill=tips_col)
+    # Left Tips Text
+    loc_x_l_text_light = padding
+    loc_y_l_text_light = loc_y_r_text_bold + font_size * 1.5
+    I1.text((loc_x_l_text_light, loc_y_l_text_light), text_time, font=lightFont, fill=tips_col)
+    # Right Bottom Text
+    I1.text((loc_x_r_text_bold, loc_y_l_text_light), text_stats, font=lightFont, fill=tips_col)
 
     # get logo image
-    logo = Image.open(str(src_dir.joinpath('logos', 'blender.png')))
+    logo_path = str(src_dir.joinpath('logos', 'blender.png' if not context.scene.sbb_dark_mode else 'blender_w.png'))
+    logo = Image.open(logo_path)
     logo.convert('RGBA')
     logo_scale = preset[config]['logo_scale']
     logo = logo.resize((int(width * logo_scale), int(width * logo_scale * logo.size[1] / logo.size[0])))
@@ -126,6 +179,7 @@ def add_watermark_handle(dummy):
     except:
         pass
 
+
 class SBB_PT_panel(bpy.types.Panel):
     bl_label = ''
     bl_idname = 'SBB_PT_panel'
@@ -144,13 +198,12 @@ class SBB_PT_panel(bpy.types.Panel):
         layout = self.layout
         layout.active = context.scene.sbb_watermark
         scene = context.scene
-        layout.prop(scene, 'sbb_config')
+        layout.prop(scene, 'sbb_dark_mode')
 
 
 def register():
     bpy.types.Scene.sbb_watermark = BoolProperty(name='Watermark', default=True)
-    bpy.types.Scene.sbb_config = EnumProperty(items=[('16/9', '16/9', '16/9'), ('1/1', '1/1', '1/1')], name='Presets',
-                                              default='16/9')
+    bpy.types.Scene.sbb_dark_mode = BoolProperty(name='Dark Mode', default=False)
 
     bpy.app.handlers.render_post.append(add_watermark_handle)
 
@@ -163,4 +216,4 @@ def unregister():
     bpy.app.handlers.render_post.remove(add_watermark_handle)
 
     del bpy.types.Scene.sbb_watermark
-    del bpy.types.Scene.sbb_config
+    del bpy.types.Scene.sbb_dark_mode
