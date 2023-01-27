@@ -7,6 +7,7 @@ import datetime
 import bpy
 from bpy.props import EnumProperty, BoolProperty
 from bpy.app.handlers import persistent
+from bpy.app.translations import pgettext_iface as iface_
 
 easy_engine_name = {
     'BLENDER_EEVEE': 'Eevee',
@@ -77,15 +78,17 @@ def add_watermark_handle(dummy):
     if not bpy.context.scene.sbb_watermark: return
 
     context = bpy.context
+    draw_text_time = context.scene.sbb_text_time
+    draw_text_stats = context.scene.sbb_text_stats
 
-    img = bpy.data.images['Render Result']
+    ori_img = bpy.data.images['Render Result']
     save_path = str(src_dir.joinpath('cache', 'render.png'))
-    img.save_render(filepath=save_path)
+    ori_img.save_render(filepath=save_path)
 
     # add watermark
     path = save_path
-    img = Image.open(path)
-    width, height = img.size
+    ori_img = Image.open(path)
+    width, height = ori_img.size
 
     preset = get_preset()
     config = auto_config(width, height)
@@ -93,68 +96,86 @@ def add_watermark_handle(dummy):
 
     # expand pixel size by scale
     scale = preset[config]['scale']
-    new_img = Image.new('RGB', (width, int(height * scale)), bg_col)  # expand the img bottom to draw
-    new_img.paste(img, (0, 0))  # fill in the original image
+    new_img = Image.new('RGBA', (width, int(height * scale)), bg_col)  # expand the img bottom to draw
+    new_img.paste(ori_img, (0, 0))  # fill in the original image
+    # draw img
+    height = int(height * (scale - 1))
+    label_img = Image.new('RGBA', (width, height), bg_col)  # expand the img bottom to draw
+    DrawImg = ImageDraw.Draw(label_img)
 
-    # Call draw Method to add 2D graphics in an image
-    I1 = ImageDraw.Draw(new_img)
-
-    # text
-    left_text = f'BLENDER {bpy.app.version_string}'
+    # info
+    title_left = 'BLENDER'
+    if context.scene.sbb_title_version:
+        title_left += f' {bpy.app.version_string}'
     # right_text = '75mm f/1.8 Filmic Cycles'
     cam = context.scene.camera.data
     fstop = round(cam.dof.aperture_fstop, 2)
     lens = bpy.context.scene.camera.data.lens
-    cs = context.scene.view_settings.view_transform
+    cs = context.scene.view_settings.view_transform.strip().replace(" ", "")
     render_engine = easy_engine_name[context.scene.render.engine]
 
-    right_text = f'{lens}mm f/{fstop} {cs.strip().replace(" ", "")} {render_engine}'
+    title_right = f'{lens}mm f/{fstop} {render_engine}'
     text_time = datetime.datetime.now().strftime('%Y.%m.%d %H:%M:%S')
     text_stats = get_scene_stats()
 
     # Add Text to an image, set size
-    font_size = height * (scale - 1) * preset[config]['font_scale']
-    boldFont = ImageFont.truetype(str(src_dir.joinpath('fonts', 'MiSans-Demibold.ttf')), int(font_size))
-    lightFont = ImageFont.truetype(str(src_dir.joinpath('fonts', 'MiSans-Medium.ttf')), int(font_size * 0.75))
+    title_font_size = height * 0.16
+    tips_font_size = title_font_size * 0.7
+    if not draw_text_stats and not draw_text_time:
+        title_font_size *= 1.25
+        tips_font_size *= 1.25
+
+    boldFont = ImageFont.truetype(str(src_dir.joinpath('fonts', 'MiSans-Demibold.ttf')), int(title_font_size))
+    lightFont = ImageFont.truetype(str(src_dir.joinpath('fonts', 'MiSans-Medium.ttf')), int(tips_font_size))
     logo_path = str(src_dir.joinpath('logos', 'blender.png' if not context.scene.sbb_dark_mode else 'blender_w.png'))
 
-    padding = width * preset[config]['padding']
-    bottom_padding = font_size * 0.5 + height * (scale - 1) * preset[config]['bottom_padding']
+    side_padding = width * preset[config]['padding']
 
-    draw_text_time = context.scene.sbb_text_time
-    draw_text_stats = context.scene.sbb_text_stats
 
-    # Left Title Text
-    I1.text((padding, height * scale - bottom_padding), left_text, font=boldFont, fill=title_col)
-    # Right Title Text
-    loc_x_r_text_bold = width - padding - I1.textsize(right_text, font=boldFont)[0]
-    loc_y_r_text_bold = height * scale - bottom_padding
-    I1.text((loc_x_r_text_bold, loc_y_r_text_bold), right_text, font=boldFont, fill=title_col)
-    # Left Tips Text
-    loc_x_l_text_light = padding
-    loc_y_l_text_light = loc_y_r_text_bold + font_size * 1.5
-    I1.text((loc_x_l_text_light, loc_y_l_text_light), text_time, font=lightFont, fill=tips_col)
-    # Right Bottom Text
-    I1.text((loc_x_r_text_bold, loc_y_l_text_light), text_stats, font=lightFont, fill=tips_col)
+
+    y_mid = height / 2
+    y_title = y_mid - title_font_size * 1.25  # 1.25
+    loc_x_r_title = width - side_padding - DrawImg.textsize(title_right, font=boldFont)[0]
+
+    if not draw_text_stats and not draw_text_time:
+        y_title += title_font_size * 0.5
+    else:
+        loc_x = side_padding
+        loc_y = y_title + title_font_size * 1.5  # 0.5 + 1.25
+        # draw both side
+        if draw_text_stats and draw_text_time:
+            DrawImg.text((loc_x, loc_y), text_time, font=lightFont, fill=tips_col)
+            DrawImg.text((loc_x_r_title, loc_y), text_stats, font=lightFont, fill=tips_col)
+        # draw on only right side
+        elif not draw_text_stats and draw_text_time:
+            DrawImg.text((loc_x_r_title, loc_y), text_time, font=lightFont, fill=tips_col)
+        else:
+            DrawImg.text((loc_x_r_title, loc_y), text_stats, font=lightFont, fill=tips_col)
+
+    # draw title
+    DrawImg.text((side_padding, y_title), title_left, font=boldFont, fill=title_col)
+    DrawImg.text((loc_x_r_title, y_title), title_right, font=boldFont, fill=title_col)
 
     # get logo image
     logo = Image.open(logo_path)
     logo.convert('RGBA')
     logo_scale = preset[config]['logo_scale']
-    logo = logo.resize((int(width * logo_scale), int(width * logo_scale * logo.size[1] / logo.size[0])))
-
+    logo_height = int(height * logo_scale)
+    logo_width = int(logo.size[0] * logo_height / logo.size[1])
+    logo = logo.resize((logo_width, logo_height), Image.ANTIALIAS)
     # paste logo image next to right text
-    loc_logo_x = int(width - padding * 2 - I1.textsize(right_text, font=boldFont)[0] - logo.size[0])
-    loc_logo_y = int(height * scale - bottom_padding)
-    new_img.paste(logo, (loc_logo_x, loc_logo_y), logo)
+    loc_logo_x = int(width - side_padding * 2 - DrawImg.textsize(title_right, font=boldFont)[0] - logo.size[0])
+    loc_logo_y = int(y_mid - logo_height / 2 )
+    label_img.paste(logo, (loc_logo_x, loc_logo_y), logo)
 
     # draw a line shape between right text and logo
-    line_start = int((loc_logo_x + logo.size[0] + loc_x_r_text_bold) / 2), int(loc_logo_y)
-    line_end = int((loc_logo_x + logo.size[0] + loc_x_r_text_bold) / 2), int(loc_logo_y + logo.size[1])
-    I1.line([line_start, line_end], fill=line_col, width=int(width / 500))
+    line_start = int((loc_logo_x + logo.size[0] + loc_x_r_title) / 2), int(loc_logo_y+logo.size[1]*0.1)
+    line_end = int((loc_logo_x + logo.size[0] + loc_x_r_title) / 2), int(loc_logo_y + logo.size[1]*0.9)
+    DrawImg.line([line_start, line_end], fill=line_col, width=int(width / 500))
 
-    # Save the edited image
+    # paste label_img to new_img and save
     out_path = str(src_dir.joinpath('output', 'watermark.png'))
+    new_img.paste(label_img, (0, ori_img.size[1]), label_img)
     new_img.save(out_path)
     # load back to blender
     if 'Render Result_WM' in bpy.data.images:
@@ -177,7 +198,8 @@ class SBB_PT_panel(bpy.types.Panel):
     bl_idname = 'SBB_PT_panel'
     bl_space_type = 'PROPERTIES'
     bl_region_type = 'WINDOW'
-    bl_context = 'render'
+    bl_context = 'output'
+    bl_parent_id = 'RENDER_PT_format'
     bl_options = {'DEFAULT_CLOSED'}
 
     def draw_header(self, context):
@@ -193,19 +215,20 @@ class SBB_PT_panel(bpy.types.Panel):
         layout.active = scene.sbb_watermark
         layout.use_property_split = True
         layout.use_property_decorate = False
-        layout.prop(scene, 'sbb_dark_mode')
+        layout.prop(scene, 'sbb_dark_mode', text=iface_("Dark") + iface_("Mode"))
 
-        # layout.label(text='Label')
-        # row = layout.row()
-        # row.prop(scene, 'sbb_text_time')
-        # row.prop(scene, 'sbb_text_stats')
+        box = layout.column(align = True,heading="Label")
+        box.prop(scene, 'sbb_title_version')
+        box.prop(scene, 'sbb_text_time')
+        box.prop(scene, 'sbb_text_stats')
 
 
 def register():
-    bpy.types.Scene.sbb_watermark = BoolProperty(name='Watermark', default=True)
+    bpy.types.Scene.sbb_watermark = BoolProperty(name='Shot By Blender', default=True)
     bpy.types.Scene.sbb_dark_mode = BoolProperty(name='Dark Mode', default=False)
     bpy.types.Scene.sbb_text_time = BoolProperty(name='Time', default=True)
-    bpy.types.Scene.sbb_text_stats = BoolProperty(name='Statics', default=True)
+    bpy.types.Scene.sbb_text_stats = BoolProperty(name='Statistics', default=True)
+    bpy.types.Scene.sbb_title_version = BoolProperty(name='Version', default=True)
 
     bpy.app.handlers.render_post.append(add_watermark_handle)
 

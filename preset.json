@@ -1,16 +1,14 @@
 {
     "2": {
-        "scale": 1.1,
-        "font_scale": 0.2,
+        "scale": 1.16,
+        "font_scale": 0.16,
         "padding": 0.025,
-        "bottom_padding": 0.65,
-        "logo_scale": 0.03
+        "logo_scale": 0.4
     },
     "1": {
-        "scale": 1.1,
-        "font_scale": 0.2,
+        "scale": 1.11,
+        "font_scale": 0.18,
         "padding": 0.04,
-        "bottom_padding": 0.65,
-        "logo_scale": 0.075
+        "logo_scale": 0.4
     }
 }
