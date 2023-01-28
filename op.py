@@ -2,7 +2,8 @@ import datetime
 from pathlib import Path
 
 import bpy
-from bpy.props import EnumProperty, BoolProperty
+from bpy.types import PropertyGroup
+from bpy.props import EnumProperty, BoolProperty, PointerProperty, StringProperty
 from bpy.app.handlers import persistent
 from bpy.app.translations import pgettext_iface as iface_
 
@@ -59,7 +60,7 @@ def get_res_paths(dark_mode=False):
 
 def get_scene_stats() -> str:
     stats = bpy.context.scene.statistics(bpy.context.view_layer)
-    print(stats)
+    # print(stats)
 
     if len(stats.split(sep=' | ')) == 7:
         coll, verts, faces, tris, objs, mem, ver = stats.split(sep=' | ')
@@ -75,9 +76,49 @@ def get_scene_stats() -> str:
     return s
 
 
-def get_img_metadata(img):
-    str = img.getdata()
-    print(str)
+# def get_img_metadata(path) -> dict:
+#     def chunk_iter(data):
+#         total_length = len(data)
+#         end = 4
+#         while (end + 8 < total_length):
+#             length = int.from_bytes(data[end + 4: end + 8], 'big')
+#             begin_chunk_type = end + 8
+#             begin_chunk_data = begin_chunk_type + 4
+#             end = begin_chunk_data + length
+#             yield (data[begin_chunk_type: begin_chunk_data],
+#                    data[begin_chunk_data: end])
+#
+#     with open(path, 'rb') as fobj:
+#         data = fobj.read()
+#
+#     assert data[:8] == b'\x89\x50\x4E\x47\x0D\x0A\x1A\x0A'
+#
+#     metadata = {}
+#
+#     for chunk_type, chunk_data in chunk_iter(data):
+#         # print("chunk type: %s" % chunk_type.decode())
+#         # if chunk_type == b'iTXt':
+#         #     print("--chunk data:", chunk_data.decode())
+#         if chunk_type == b'tEXt':
+#             k, v = chunk_data.decode('iso-8859-1').split('\0')
+#             metadata[k] = v
+#
+#     return metadata
+
+
+def copy_img_metadata(src_path, dist_path):
+    """tEXt"""
+    from PIL import Image
+    from PIL.PngImagePlugin import PngInfo
+
+    src_img = Image.open(src_path)
+    dist_img = Image.open(dist_path)
+
+    metadata = PngInfo()
+    for k, v in src_img.text.items():
+        metadata.add_text(k, str(v))
+
+    dist_img.save(dist_path, pnginfo=metadata)
 
 
 @persistent
@@ -86,11 +127,11 @@ def add_watermark_handle(dummy):
     from PIL import ImageDraw
     from PIL import ImageFont
 
-    if not bpy.context.scene.sbb_watermark: return
+    if not bpy.context.scene.sbb.enable: return
 
     context = bpy.context
-    draw_text_time = context.scene.sbb_text_time
-    draw_text_stats = context.scene.sbb_text_stats
+    draw_text_time = context.scene.sbb.text_time
+    draw_text_stats = context.scene.sbb.text_stats
 
     cache_dir = src_dir.joinpath('cache')
     cache_dir.mkdir(exist_ok=True)
@@ -98,15 +139,14 @@ def add_watermark_handle(dummy):
     ori_img = bpy.data.images['Render Result']
     save_path = str(cache_dir.joinpath('render.png'))
     ori_img.save_render(filepath=save_path)
-    # get_img_metadata(ori_img)
 
-    path = save_path
-    ori_img = Image.open(path)
+    src_path = save_path
+    ori_img = Image.open(src_path)
     width, height = ori_img.size
 
     preset = get_preset()
     config = auto_config(width, height)
-    bg_col, title_col, tips_col, line_col = get_color(dark_mode=context.scene.sbb_dark_mode)
+    bg_col, title_col, tips_col, line_col = get_color(dark_mode=context.scene.sbb.dark_mode)
 
     # expand pixel size by scale
     scale = preset[config]['scale']
@@ -119,7 +159,7 @@ def add_watermark_handle(dummy):
 
     # info
     title_left = 'BLENDER'
-    if context.scene.sbb_title_version:
+    if context.scene.sbb.title_version:
         title_left += f' {bpy.app.version_string}'
     # right_text = '75mm f/1.8 Filmic Cycles'
     cam = context.scene.camera.data
@@ -139,7 +179,7 @@ def add_watermark_handle(dummy):
         tips_font_size *= 1.25
 
     # get resource
-    font_path1, font_path2, logo_path = get_res_paths(dark_mode=context.scene.sbb_dark_mode)
+    font_path1, font_path2, logo_path = get_res_paths(dark_mode=context.scene.sbb.dark_mode)
     boldFont = ImageFont.truetype(font_path1, int(title_font_size))
     lightFont = ImageFont.truetype(font_path2, int(tips_font_size))
 
@@ -170,6 +210,12 @@ def add_watermark_handle(dummy):
     DrawImg.text((loc_x_r_title, y_title), title_right, font=boldFont, fill=title_col)
 
     # get logo image
+    if context.scene.sbb.ow_logo:
+        new_logo_path = context.scene.sbb.logo_path
+        p = Path(new_logo_path)
+        if p.exists() and p.expanduser().is_file() and p.suffix in ['.png', '.jpg', '.jpeg', 'JPG', 'JPEG', 'PNG']:
+            logo_path = new_logo_path
+
     logo = Image.open(logo_path)
     logo.convert('RGBA')
     logo_scale = preset[config]['logo_scale']
@@ -185,7 +231,7 @@ def add_watermark_handle(dummy):
     # draw a line shape between right text and logo
     line_start = int((loc_logo_x + logo.size[0] + loc_x_r_title) / 2), int(loc_logo_y + logo.size[1] * 0.1)
     line_end = int((loc_logo_x + logo.size[0] + loc_x_r_title) / 2), int(loc_logo_y + logo.size[1] * 0.9)
-    DrawImg.line([line_start, line_end], fill=line_col, width=int(width / 500))
+    DrawImg.line([line_start, line_end], fill=line_col, width=int(logo.size[1] / 20))
 
     # paste label_img to new_img and save
     out_path = str(cache_dir.joinpath('output.png'))
@@ -193,6 +239,9 @@ def add_watermark_handle(dummy):
     new_img.save(out_path)
     out_label_path = str(cache_dir.joinpath('label.png'))
     label_img.save(out_label_path)
+
+    # copy img metadata
+    copy_img_metadata(src_path, out_path)
 
     # load back to blender
     if 'Render Result_WM' in bpy.data.images:
@@ -224,39 +273,53 @@ class SBB_PT_panel(bpy.types.Panel):
         layout = self.layout
         scene = context.scene
 
-        layout.prop(scene, 'sbb_watermark')
+        layout.prop(scene.sbb, 'enable',text='Shot By Blender')
 
     def draw(self, context):
         layout = self.layout
-        scene = context.scene
+        sbb = context.scene.sbb
 
-        layout.active = scene.sbb_watermark
+        layout.active = sbb.enable
         layout.use_property_split = True
         layout.use_property_decorate = False
-        layout.prop(scene, 'sbb_dark_mode', text=iface_("Dark") + iface_("Mode"))
+        layout.prop(sbb, 'dark_mode', text=iface_("Dark") + iface_("Mode"))
 
         box = layout.column(align=True, heading="Label")
-        box.prop(scene, 'sbb_title_version')
-        box.prop(scene, 'sbb_text_time')
-        box.prop(scene, 'sbb_text_stats')
+        box.prop(sbb, 'title_version')
+        box.prop(sbb, 'text_time')
+        box.prop(sbb, 'text_stats')
+
+        box = layout.column(align=True, heading="Overwrite")
+        box.prop(sbb, 'ow_logo')
+        if sbb.ow_logo:
+            box.prop(sbb, 'logo_path')
+
+
+class SBB_Props(PropertyGroup):
+    enable: BoolProperty(name='Enable', default=True)
+    dark_mode: BoolProperty(name='Dark Mode', default=False)
+    # label
+    text_time: BoolProperty(name='Time', default=True)
+    text_stats: BoolProperty(name='Statistics', default=True)
+    title_version: BoolProperty(name='Version', default=True)
+    # overwrite
+    ow_logo: BoolProperty(name='Logo', default=False)
+    logo_path: StringProperty(name='Path', subtype='FILE_PATH')
 
 
 def register():
-    bpy.types.Scene.sbb_watermark = BoolProperty(name='Shot By Blender', default=True)
-    bpy.types.Scene.sbb_dark_mode = BoolProperty(name='Dark Mode', default=False)
-    bpy.types.Scene.sbb_text_time = BoolProperty(name='Time', default=True)
-    bpy.types.Scene.sbb_text_stats = BoolProperty(name='Statistics', default=True)
-    bpy.types.Scene.sbb_title_version = BoolProperty(name='Version', default=True)
+    bpy.utils.register_class(SBB_Props)
+    bpy.utils.register_class(SBB_PT_panel)
+
+    bpy.types.Scene.sbb = PointerProperty(type=SBB_Props)
 
     bpy.app.handlers.render_post.append(add_watermark_handle)
 
-    bpy.utils.register_class(SBB_PT_panel)
-
 
 def unregister():
-    bpy.utils.unregister_class(SBB_PT_panel)
-
     bpy.app.handlers.render_post.remove(add_watermark_handle)
 
-    del bpy.types.Scene.sbb_watermark
-    del bpy.types.Scene.sbb_dark_mode
+    bpy.utils.unregister_class(SBB_PT_panel)
+    bpy.utils.unregister_class(SBB_Props)
+
+    del bpy.types.Scene.sbb
