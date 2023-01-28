@@ -12,7 +12,8 @@ Install it in blender via `Edit` -> `Preferences` -> `Add-ons` -> `Install`
 
 ## Usage
 You can file the addon in Properties panel -> Output -> Format -> Shot By Blender
-![img.png](/res/readme/img.png)
+
+![img.png](./res/readme/img.png)
 
 #### Dark Mode
 
@@ -35,3 +36,10 @@ You can file the addon in Properties panel -> Output -> Format -> Shot By Blende
 + Uncheck Both
 
 ![label](./res/readme/label_2.png)
+
+#### Overwrite Logo
+
+> You can use your own logo by checking `Overwrite Logo` and set the path of your logo in `Logo Path`
+> Notice: Only support jpg/jpeg/png format
+
+![label](./res/readme/output_label.png)

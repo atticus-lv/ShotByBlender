@@ -10,20 +10,19 @@ bl_info = {
     "category": "Render",
 }
 
-from . import op
+from . import handle, panel, props
+from .install_require import ensure_require
 
 
 def register():
-    op.register()
+    ensure_require()
 
-    try:
-        import PIL
-    except ImportError:
-        import sys
-        import subprocess
-
-        subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'pillow'])
+    props.register()
+    panel.register()
+    handle.register()
 
 
 def unregister():
-    op.unregister()
+    handle.unregister()
+    panel.unregister()
+    props.unregister()
