@@ -12,8 +12,18 @@ bl_info = {
 
 from . import op
 
+
 def register():
     op.register()
+
+    try:
+        import PIL
+    except ImportError:
+        import sys
+        import subprocess
+
+        subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'pillow'])
+
 
 def unregister():
     op.unregister()

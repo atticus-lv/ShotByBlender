@@ -1,9 +1,6 @@
-from PIL import Image
-from PIL import ImageDraw
-from PIL import ImageFont
+import datetime
 from pathlib import Path
 
-import datetime
 import bpy
 from bpy.props import EnumProperty, BoolProperty
 from bpy.app.handlers import persistent
@@ -62,6 +59,7 @@ def get_res_paths(dark_mode=False):
 
 def get_scene_stats() -> str:
     stats = bpy.context.scene.statistics(bpy.context.view_layer)
+    print(stats)
 
     if len(stats.split(sep=' | ')) == 7:
         coll, verts, faces, tris, objs, mem, ver = stats.split(sep=' | ')
@@ -71,13 +69,23 @@ def get_scene_stats() -> str:
     verts = verts.split(sep=':')[-1]
     faces = faces.split(sep=':')[-1]
     tris = tris.split(sep=':')[-1]
+    mem = mem.split(sep=':')[-1]
 
-    s = f"Faces: {faces} | {mem}"
+    s = f"Faces: {faces} |{mem}"
     return s
+
+
+def get_img_metadata(img):
+    str = img.getdata()
+    print(str)
 
 
 @persistent
 def add_watermark_handle(dummy):
+    from PIL import Image
+    from PIL import ImageDraw
+    from PIL import ImageFont
+
     if not bpy.context.scene.sbb_watermark: return
 
     context = bpy.context
@@ -90,6 +98,7 @@ def add_watermark_handle(dummy):
     ori_img = bpy.data.images['Render Result']
     save_path = str(cache_dir.joinpath('render.png'))
     ori_img.save_render(filepath=save_path)
+    # get_img_metadata(ori_img)
 
     path = save_path
     ori_img = Image.open(path)
