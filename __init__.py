@@ -4,8 +4,8 @@ bl_info = {
     "version": (0, 1),
     "blender": (3, 5, 0),
     "location": "Properties > Output > Format",
-    "description": "Add unique watermark to your render",
-    "warning": "",
+    "description": "Add XIAOMI style watermark to your render",
+    "warning": "Beta version",
     "wiki_url": "",
     "category": "Render",
 }
