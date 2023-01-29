@@ -33,7 +33,7 @@ def get_scene_stats() -> str:
 
 
 @contextmanager
-def grab_blender_img(name='Render Result'):
+def grab_blender_img(name='Render Result', new_name='Render Result_WM'):
     img = bpy.data.images[name]
 
     save_dir = Path(__file__).parent.joinpath('cache')
@@ -41,14 +41,17 @@ def grab_blender_img(name='Render Result'):
     out_path = save_dir.joinpath('output.png')
     if not save_dir.exists():
         save_dir.mkdir(exist_ok=True)
-    img.save_render(filepath=str(save_path))
-
+    if img.type == 'RENDER_RESULT':
+        img.save_render(filepath=str(save_path))
+    else:
+        img.save(filepath=str(save_path))
+    # --------------------
     yield str(save_path), str(out_path)
-
-    if 'Render Result_WM' in bpy.data.images:
-        bpy.data.images.remove(bpy.data.images['Render Result_WM'])
+    # --------------------
+    if new_name in bpy.data.images:
+        bpy.data.images.remove(bpy.data.images[new_name])
     data = bpy.data.images.load(str(out_path))
-    data.name = 'Render Result_WM'
+    data.name = new_name
     # change image editor to show the new image
     try:
         window = bpy.context.window_manager.windows[-1]
@@ -60,14 +63,14 @@ def grab_blender_img(name='Render Result'):
         pass
 
 
-def add_watermark_4_blender_img(name='Render Result'):
+def add_watermark_4_blender_img(name='Render Result',new_name='Render Result_WM'):
     from . import add_watermark
 
     context = bpy.context
     sbb = context.scene.sbb
     if not sbb.enable: return
 
-    with grab_blender_img(name) as (src_path, out_path):
+    with grab_blender_img(name,new_name) as (src_path, out_path):
         title_left = 'BLENDER'
         if sbb.title_version:
             title_left += f' {bpy.app.version_string}'

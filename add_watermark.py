@@ -105,9 +105,16 @@ def get_config(width, height):
             "padding": 0.025,
             "logo_scale": 0.4
         }
-    else:
+    elif radio > 0.5:
         config = {
             "expand_scale": 1.11,
+            "font_scale": 0.18,
+            "padding": 0.04,
+            "logo_scale": 0.4
+        }
+    else:
+        config = {
+            "expand_scale": 1.05,
             "font_scale": 0.18,
             "padding": 0.04,
             "logo_scale": 0.4

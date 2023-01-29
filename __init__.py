@@ -10,7 +10,7 @@ bl_info = {
     "category": "Render",
 }
 
-from . import handle, panel, props
+from . import handle, panel, props, op
 from .install_require import ensure_require
 
 
@@ -20,9 +20,11 @@ def register():
     props.register()
     panel.register()
     handle.register()
+    op.register()
 
 
 def unregister():
+    op.register()
     handle.unregister()
     panel.unregister()
     props.unregister()

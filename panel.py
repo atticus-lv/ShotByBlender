@@ -36,10 +36,22 @@ class SBB_PT_panel(bpy.types.Panel):
         if sbb.ow_logo:
             box.prop(sbb, 'logo_path')
 
+class SBB_PT_image_editor_panel(bpy.types.Panel):
+    bl_label = 'Shot By Blender'
+    bl_idname = 'SBB_PT_image_editor_panel'
+    bl_space_type = 'IMAGE_EDITOR'
+    bl_region_type = 'UI'
+    bl_category = 'View'
+
+    def draw(self,context):
+        layout = self.layout
+        layout.operator('sbb.add_watermark_2_img')
 
 def register():
     bpy.utils.register_class(SBB_PT_panel)
+    # bpy.utils.register_class(SBB_PT_image_editor_panel)
 
 
 def unregister():
     bpy.utils.unregister_class(SBB_PT_panel)
+    # bpy.utils.unregister_class(SBB_PT_image_editor_panel)
