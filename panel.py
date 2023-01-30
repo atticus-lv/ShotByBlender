@@ -31,15 +31,11 @@ class SBB_PT_panel(bpy.types.Panel):
         box.prop(sbb, 'text_time')
         box.prop(sbb, 'text_stats')
 
-        box = layout.column(align=True)
-        row = box.row()
-        row.template_icon_view(sbb, 'logo',scale_popup=3)
-        row.template_icon_view(sbb, 'logo_dark',scale_popup=3)
-
         box = layout.column(align=True, heading="Overwrite")
         box.prop(sbb, 'ow_logo')
         if sbb.ow_logo:
             box.prop(sbb, 'logo_path')
+
 
 class SBB_PT_image_editor_panel(bpy.types.Panel):
     bl_label = 'Shot By Blender'
@@ -48,9 +44,10 @@ class SBB_PT_image_editor_panel(bpy.types.Panel):
     bl_region_type = 'UI'
     bl_category = 'View'
 
-    def draw(self,context):
+    def draw(self, context):
         layout = self.layout
         layout.operator('sbb.add_watermark_2_img')
+
 
 def register():
     bpy.utils.register_class(SBB_PT_panel)
