@@ -65,9 +65,12 @@ def grab_blender_img(name='Render Result', new_name='Render Result_WM'):
 
 def add_watermark_4_blender_img(name='Render Result',new_name='Render Result_WM'):
     from . import add_watermark
+    from .prefs import get_prefs
 
     context = bpy.context
     sbb = context.scene.sbb
+    pref = get_prefs()
+
     if not sbb.enable: return
 
     with grab_blender_img(name,new_name) as (src_path, out_path):
@@ -85,6 +88,13 @@ def add_watermark_4_blender_img(name='Render Result',new_name='Render Result_WM'
         text_time = datetime.datetime.now().strftime('%Y.%m.%d %H:%M:%S')
         text_stats = get_scene_stats()
 
+        logo_w = str(src_dir.joinpath('res','logos', pref.logo))
+        logo_dark = str(src_dir.joinpath('res','logos', pref.logo_dark))
+        if sbb.ow_logo:
+            logo_path = sbb.logo_path
+        else:
+            logo_path = logo_w if not sbb.dark_mode else logo_dark
+
         add_watermark.main(
             input_path=src_path,
             output_path=out_path,
@@ -94,7 +104,7 @@ def add_watermark_4_blender_img(name='Render Result',new_name='Render Result_WM'
             text_time=text_time if sbb.text_time else None,
             text_stats=text_stats if sbb.text_stats else None,
             dark_mode=sbb.dark_mode,
-            custom_logo_path=sbb.logo_path if sbb.ow_logo else None,
+            custom_logo_path=logo_path,
         )
 
 

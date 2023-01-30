@@ -18,8 +18,9 @@ class SBB_OT_add_watermark_2_img(bpy.types.Operator):
 
 
 def register():
-    bpy.utils.register_class(SBB_OT_add_watermark_2_img)
-
+    # bpy.utils.register_class(SBB_OT_add_watermark_2_img)
+    pass
 
 def unregister():
-    bpy.utils.unregister_class(SBB_OT_add_watermark_2_img)
+    # bpy.utils.unregister_class(SBB_OT_add_watermark_2_img)
+    pass

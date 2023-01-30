@@ -10,6 +10,7 @@ class SBB_Props(PropertyGroup):
     text_time: BoolProperty(name='Time', default=True)
     text_stats: BoolProperty(name='Statistics', default=True)
     title_version: BoolProperty(name='Version', default=True)
+
     # overwrite
     ow_logo: BoolProperty(name='Logo', default=False)
     logo_path: StringProperty(name='Path', subtype='FILE_PATH')

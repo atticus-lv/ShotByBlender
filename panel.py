@@ -31,6 +31,11 @@ class SBB_PT_panel(bpy.types.Panel):
         box.prop(sbb, 'text_time')
         box.prop(sbb, 'text_stats')
 
+        box = layout.column(align=True)
+        row = box.row()
+        row.template_icon_view(sbb, 'logo',scale_popup=3)
+        row.template_icon_view(sbb, 'logo_dark',scale_popup=3)
+
         box = layout.column(align=True, heading="Overwrite")
         box.prop(sbb, 'ow_logo')
         if sbb.ow_logo:
