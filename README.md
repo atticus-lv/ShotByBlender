@@ -1,5 +1,7 @@
 ## Shot By Blender 
 
+English | [中文](./README.CN.md)
+
 > This addon provides you a XIAOMI style photo watermark on your render images
 
 ![](res/readme/2.8.jpg)
