@@ -91,7 +91,7 @@ def add_watermark_4_blender_img(name='Render Result',new_name='Render Result_WM'
         logo_w = str(src_dir.joinpath('res','logos', pref.logo))
         logo_dark = str(src_dir.joinpath('res','logos', pref.logo_dark))
         if sbb.ow_logo:
-            logo_path = sbb.logo_path
+            logo_path = bpy.path.abspath(sbb.logo_path)
         else:
             logo_path = logo_w if not sbb.dark_mode else logo_dark
 
