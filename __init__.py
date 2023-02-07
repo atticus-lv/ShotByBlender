@@ -21,11 +21,11 @@ def register():
     props.register()
     panel.register()
     handle.register()
-    op.register()
+    # op.register()
 
 
 def unregister():
-    op.register()
+    # op.register()
     handle.unregister()
     panel.unregister()
     props.unregister()

@@ -18,31 +18,6 @@
 
 ![img.jpg](./res/readme/img.jpg)
 
-#### 暗黑模式
+## 样式
 
-![label](./res/readme/label_dark.jpg)
-
-#### 全部标签
-
-![label](./res/readme/label.jpg)
-
-#### 版本（不勾选）
-
-![label](./res/readme/label_v.jpg)
-
-#### 统计信息&时间
-
-+ 只勾选一个
-
-![label](./res/readme/label_1.jpg)
-
-+ 都不勾选
-
-![label](./res/readme/label_2.jpg)
-
-#### 覆写logo
-
-> 你可以通过选择`覆盖logo`来使用你自己的logo，并在`logo path`中设置你的logo的路径
-> 注意:只支持jpg/jpeg/jpg格式
-
-![label](./res/readme/output_label.jpg)
+![](./res/readme/style.png)

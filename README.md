@@ -17,31 +17,6 @@ You can file the addon in Properties panel -> Output -> Format -> Shot By Blende
 
 ![img.jpg](./res/readme/img.jpg)
 
-#### Dark Mode
+## Style
 
-![label](./res/readme/label_dark.jpg)
-
-#### All Labels
-
-![label](./res/readme/label.jpg)
-
-#### Version (Uncheck)
-
-![label](./res/readme/label_v.jpg)
-
-#### Stats&Time 
-
-+ Uncheck One
-
-![label](./res/readme/label_1.jpg)
-
-+ Uncheck Both
-
-![label](./res/readme/label_2.jpg)
-
-#### Overwrite Logo
-
-> You can use your own logo by checking `Overwrite Logo` and set the path of your logo in `Logo Path`
-> Notice: Only support jpg/jpeg/jpg format
-
-![label](./res/readme/output_label.jpg)
+![](./res/readme/style.png)
