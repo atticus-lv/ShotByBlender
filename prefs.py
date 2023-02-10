@@ -1,5 +1,5 @@
 import bpy
-from bpy.props import EnumProperty
+from bpy.props import EnumProperty, StringProperty
 from bpy.utils import previews
 from bpy.app.translations import pgettext_iface as iface_
 
@@ -30,10 +30,14 @@ class Preferences(bpy.types.AddonPreferences):
     logo: EnumProperty(name='Logo', items=enum_logo_items, default=0)
     logo_dark: EnumProperty(name='Dark', items=enum_logo_items, default=5)
 
+    colorspace: StringProperty(name='Color Space', default='sRGB')
+
     def draw(self, context):
         layout = self.layout
         layout.use_property_split = True
         layout.use_property_decorate = False
+
+        layout.label(text = 'Logo')
 
         row = layout.row()
         row.separator(factor=2)
@@ -44,6 +48,10 @@ class Preferences(bpy.types.AddonPreferences):
         col2.label(text=iface_("Dark") + iface_("Mode"))
         col2.template_icon_view(self, 'logo_dark', scale_popup=3)
         row.separator(factor=2)
+
+        layout.separator()
+        layout.label(text = 'Color Space')
+        layout.prop(self, 'colorspace', text=f"({iface_('Import')}){iface_('Color Space')}")
 
 
 def register_icon():

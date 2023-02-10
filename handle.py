@@ -33,7 +33,7 @@ def get_scene_stats() -> str:
 
 
 @contextmanager
-def grab_blender_img(name='Render Result', new_name='Render Result_WM'):
+def grab_blender_img(name='Render Result', new_name='Render Result_WM',colorspace = 'sRGB'):
     img = bpy.data.images[name]
 
     save_dir = Path(__file__).parent.joinpath('cache')
@@ -52,6 +52,11 @@ def grab_blender_img(name='Render Result', new_name='Render Result_WM'):
         bpy.data.images.remove(bpy.data.images[new_name])
     data = bpy.data.images.load(str(out_path))
     data.name = new_name
+    # colorspace
+    try:
+        data.colorspace_settings.name = colorspace
+    except:
+        pass
     # change image editor to show the new image
     try:
         window = bpy.context.window_manager.windows[-1]
@@ -73,7 +78,7 @@ def add_watermark_4_blender_img(name='Render Result',new_name='Render Result_WM'
 
     if not sbb.enable: return
 
-    with grab_blender_img(name,new_name) as (src_path, out_path):
+    with grab_blender_img(name,new_name,pref.colorspace) as (src_path, out_path):
         title_left = 'BLENDER'
         if sbb.title_version:
             title_left += f' {bpy.app.version_string}'
