@@ -1,6 +1,6 @@
 ## Shot By Blender 
 
-[English](./README.md) | 中文
+[English](./README.md) | 中文 | [版本更改](./CHANGE_LOG.md)
 
 
 > 这个插件提供了一个小米风格的照片水印作用于渲染结果

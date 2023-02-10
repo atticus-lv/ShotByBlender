@@ -1,7 +1,7 @@
 bl_info = {
     "name": "Shot By Blender",
     "author": "Atticus",
-    "version": (0, 1),
+    "version": (0, 2),
     "blender": (3, 5, 0),
     "location": "Properties > Output > Format",
     "description": "Add XIAOMI style watermark to your render",
