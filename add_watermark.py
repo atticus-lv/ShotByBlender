@@ -43,8 +43,10 @@ def main(input_path, output_path,
     side_padding = width * config['padding']
     y_mid = height / 2
     y_title = y_mid - title_font_size * 1.25  # 1.25
-    loc_x_r_title = width - side_padding - DrawImg.textsize(title_right, font=boldFont)[0]
-
+    if hasattr(DrawImg,'textsize'):
+        loc_x_r_title = width - side_padding - DrawImg.textsize(title_right, font=boldFont)[0]
+    else:
+        loc_x_r_title = width - side_padding - DrawImg.textlength(title_right, font=boldFont)
     if text_stats is None and text_time is None:
         y_title += title_font_size * 0.5
     else:
@@ -76,7 +78,10 @@ def main(input_path, output_path,
     logo_width = int(logo.size[0] * logo_height / logo.size[1])
     logo = logo.resize((logo_width, logo_height), Image.ANTIALIAS)
     # paste logo image next to right text
-    loc_logo_x = int(width - side_padding * 2 - DrawImg.textsize(title_right, font=boldFont)[0] - logo.size[0])
+    if hasattr(DrawImg,'textsize'):
+        loc_logo_x = int(width - side_padding * 2 - DrawImg.textsize(title_right, font=boldFont)[0] - logo.size[0])
+    else:
+        loc_logo_x = int(width - side_padding * 2 - DrawImg.textlength(title_right, font=boldFont) - logo.size[0])
     loc_logo_y = int(y_mid - logo_height / 2)
     label_img.paste(logo, (loc_logo_x, loc_logo_y), logo)
 

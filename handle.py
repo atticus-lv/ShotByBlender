@@ -20,8 +20,10 @@ def get_scene_stats() -> str:
 
     if len(stats.split(sep=' | ')) == 7:
         coll, verts, faces, tris, objs, mem, ver = stats.split(sep=' | ')
-    else:
+    elif len(stats.split(sep=' | ')) == 8:
         coll, obj, verts, faces, tris, objs, mem, ver = stats.split(sep=' | ')
+    elif len(stats.split(sep=' | ')) == 9:
+        coll, obj, verts, faces, tris, objs, duration, mem, ver = stats.split(sep=' | ')
 
     verts = verts.split(sep=':')[-1]
     faces = faces.split(sep=':')[-1]
