@@ -76,7 +76,10 @@ def main(input_path, output_path,
     logo_scale = config['logo_scale']
     logo_height = int(height * logo_scale)
     logo_width = int(logo.size[0] * logo_height / logo.size[1])
-    logo = logo.resize((logo_width, logo_height), Image.ANTIALIAS)
+    if hasattr(Image, 'ANTIALIAS'):
+        logo = logo.resize((logo_width, logo_height), Image.ANTIALIAS)
+    else:
+        logo = logo.resize((logo_width, logo_height),Image.LANCZOS)
     # paste logo image next to right text
     if hasattr(DrawImg,'textsize'):
         loc_logo_x = int(width - side_padding * 2 - DrawImg.textsize(title_right, font=boldFont)[0] - logo.size[0])
